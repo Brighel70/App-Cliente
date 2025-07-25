@@ -1,0 +1,9 @@
+# Supabase Configuration
+REACT_APP_SUPABASE_URL=your_supabase_project_url
+REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# WhatsApp Configuration
+REACT_APP_WHATSAPP_NUMBER=393356222225
+
+# App Configuration
+REACT_APP_APP_NAME=MyDivinos
