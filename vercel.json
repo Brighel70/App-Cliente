@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "mydivinos-app",
+  "name": "app-cliente",
   "builds": [
     {
       "src": "package.json",
