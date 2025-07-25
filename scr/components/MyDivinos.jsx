@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, ChevronDown, ChevronRight, X, ShoppingCart, RotateCcw, Menu } from 'lucide-react';
-import { supabaseApi } from '../lib/supabase';
+import { supabaseApi } from '../lib/supabas';
 
 const MyDivinos = () => {
   const [user, setUser] = useState(null);
