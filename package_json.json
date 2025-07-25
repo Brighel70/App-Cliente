@@ -2,6 +2,10 @@
   "name": "mydivinos-app",
   "version": "1.0.0",
   "private": true,
+  "description": "App mobile per ordinare vini e distillati tramite WhatsApp",
+  "homepage": "https://mydivinos-app.vercel.app",
+  "author": "MyDivinos Team",
+  "keywords": ["react", "vini", "enoteca", "whatsapp", "mobile", "pwa"],
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",
     "@testing-library/jest-dom": "^5.16.4",
@@ -17,7 +21,10 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
+    "deploy": "npm run build && vercel --prod"
   },
   "eslintConfig": {
     "extends": [
@@ -36,5 +43,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.24",
+    "tailwindcss": "^3.3.2"
   }
 }
