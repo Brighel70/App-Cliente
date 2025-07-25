@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Star, ChevronDown, ChevronRight, X, ShoppingCart, RotateCcw, Menu } from 'lucide-react';
-import { supabaseApi } from '../lib/supabase';
 
 const MyDivinos = () => {
-  const [user, setUser] = useState(null);
+  // UTENTE HARDCODED - ACCESSO DIRETTO SENZA LOGIN
+  const [user] = useState({ 
+    id: '1', 
+    nome_locale: 'Andrea Bulgari', 
+    telefono: '+393356222225' 
+  });
+  
   const [loading, setLoading] = useState(true);
   const [macroCategories, setMacroCategories] = useState([]);
   const [expandedMacroCategories, setExpandedMacroCategories] = useState({});
   const [expandedSubCategories, setExpandedSubCategories] = useState({});
-  const [favorites, setFavorites] = useState(new Set());
+  const [favorites, setFavorites] = useState(new Set(['BR001', 'AD001']));
   const [cart, setCart] = useState({});
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [notes, setNotes] = useState('');
@@ -17,7 +22,6 @@ const MyDivinos = () => {
   const [messageText, setMessageText] = useState('');
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [pastOrders, setPastOrders] = useState([]);
-  const [orderSuccess, setOrderSuccess] = useState(false);
   
   // NAVIGAZIONE PULITA CON STATO UNICO
   const [currentPage, setCurrentPage] = useState('homepage');
@@ -25,106 +29,131 @@ const MyDivinos = () => {
   
   const hamburgerRef = useRef(null);
 
-  // Carica dati iniziali
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
-  const initializeApp = async () => {
-    try {
-      setLoading(true);
-      
-      // Per ora usiamo Andrea Bulgari hardcoded
-      // In futuro si può aggiungere autenticazione
-      const userData = await supabaseApi.getUserByPhone('+393356222225');
-      
-      if (!userData) {
-        console.error('Utente non trovato');
-        return;
-      }
-
-      setUser(userData);
-      
-      // Carica prodotti per l'utente
-      const productsData = await supabaseApi.getProductsForUser(userData.id);
-      
-      // Organizza i prodotti per categoria
-      const categoriesMap = new Map();
-      
-      productsData.forEach(item => {
-        const product = item.prodotti;
-        const subCategory = product.sub_categorie;
-        const macroCategory = subCategory.macro_categorie;
-        
-        if (!categoriesMap.has(macroCategory.id)) {
-          categoriesMap.set(macroCategory.id, {
-            id: macroCategory.id,
-            name: macroCategory.nome,
-            icon: macroCategory.icona,
-            subcategories: new Map()
-          });
-        }
-        
-        const macro = categoriesMap.get(macroCategory.id);
-        
-        if (!macro.subcategories.has(subCategory.id)) {
-          macro.subcategories.set(subCategory.id, {
-            id: subCategory.id,
-            name: subCategory.nome,
-            products: []
-          });
-        }
-        
-        const sub = macro.subcategories.get(subCategory.id);
-        sub.products.push({
-          id: product.id,
-          name: product.nome,
-          description: product.descrizione,
-          price: parseFloat(product.prezzo),
-          code: product.codice,
-          dimensions: product.dimensioni,
-          subcategory: product.sottocategoria
-        });
-      });
-      
-      // Converte le mappe in array
-      const categoriesArray = Array.from(categoriesMap.values()).map(macro => ({
-        ...macro,
-        subcategories: Array.from(macro.subcategories.values())
-      }));
-      
-      setMacroCategories(categoriesArray);
-      
-      // Carica preferiti
-      const favoritesData = await supabaseApi.getFavorites(userData.id);
-      setFavorites(new Set(favoritesData));
-      
-      // Carica storico ordini
-      const ordersData = await supabaseApi.getOrderHistory(userData.id);
-      const formattedOrders = ordersData.map(order => ({
-        id: order.id,
-        date: new Date(order.data_ordine).toLocaleDateString('it-IT'),
-        notes: order.note,
-        stato: order.stato,
-        products: order.ordini_prodotti.map(op => ({
-          id: op.prodotti.id,
-          name: op.prodotti.nome,
-          code: op.prodotti.codice,
-          quantity: op.quantita
-        }))
-      }));
-      
-      setPastOrders(formattedOrders);
-      
-      // Aggiorna ultimo login
-      await supabaseApi.updateLastLogin(userData.id);
-      
-    } catch (error) {
-      console.error('Errore inizializzazione app:', error);
-    } finally {
-      setLoading(false);
+  // DATI MOCK - SOSTITUIRANNO SUPABASE IN QUESTA FASE
+  const mockMacroCategories = [
+    { 
+      id: 'vino', 
+      name: 'VINO', 
+      icon: '🍷',
+      subcategories: [
+        { id: 'vino-rosso', name: 'Vino Rosso', products: [
+          { id: 'BR001', name: 'Barbaresco Ceretto', description: 'Vino elegante e profondo, con note di ciliegia, viola e spezie fini.', price: 45.00, code: 'BR001', subcategory: 'Nebbiolo' },
+          { id: 'AD001', name: 'AD 1212', description: 'Rosso intenso e speziato, con note di frutta matura e tannini morbidi.', price: 32.00, code: 'AD001', subcategory: 'Barbera' }
+        ]},
+        { id: 'vino-bianco', name: 'Vino Bianco', products: [
+          { id: 'VB001', name: 'Chardonnay Riserva', description: 'Bianco strutturato e minerale, note di frutta tropicale.', price: 28.00, code: 'VB001', subcategory: 'Chardonnay' }
+        ]},
+        { id: 'champagne', name: 'Champagne', products: [
+          { id: 'BS001', name: 'Billecart - Salmon Brut', description: 'Champagne fine e vivace, con bollicina elegante, note di agrumi e pane tostato.', price: 55.00, code: 'BS001', subcategory: 'Brut' },
+          { id: 'PR001', name: 'Pol Roger', description: 'Champagne strutturato e raffinato, con sentori di mela, brioche e fiori bianchi.', price: 48.00, code: 'PR001', subcategory: 'Brut' }
+        ]}
+      ]
+    },
+    {
+      id: 'distillati',
+      name: 'DISTILLATI',
+      icon: '🥃',
+      subcategories: [
+        { id: 'vodka', name: 'Vodka', products: [
+          { id: 'VD001', name: 'Grey Goose', description: 'Vodka premium francese, purezza cristallina.', price: 35.00, code: 'VD001', subcategory: 'Premium' }
+        ]},
+        { id: 'gin', name: 'Gin', products: [
+          { id: 'PG001', name: 'Portofino Gin', description: 'Gin premium italiano con botaniche mediterranee, fresco e aromatico.', price: 38.00, code: 'PG001', subcategory: 'Premium' },
+          { id: 'HG001', name: 'Hendricks', description: 'Gin scozzese distintivo con cetriolo e rosa, dal sapore unico e raffinato.', price: 42.00, code: 'HG001', subcategory: 'Premium' }
+        ]},
+        { id: 'whisky', name: 'Whisky', products: [
+          { id: 'WH001', name: 'Macallan 12', description: 'Whisky scozzese single malt invecchiato 12 anni, note di miele e spezie.', price: 85.00, code: 'WH001', subcategory: 'Single Malt' }
+        ]}
+      ]
+    },
+    {
+      id: 'analcolici',
+      name: 'ANALCOLICI',
+      icon: '🥤',
+      subcategories: [
+        { id: 'tonica', name: 'Tonica', products: [
+          { id: 'FT001', name: 'Fever Tree Tonic Water', description: 'Acqua tonica premium con chinino naturale, perfetta per gin tonic.', price: 24.00, code: 'FT001', subcategory: 'Tonica' },
+          { id: 'SW001', name: 'Schweppes Tonic', description: 'Tonica classica con bollicine fini e gusto bilanciato.', price: 18.00, code: 'SW001', subcategory: 'Tonica' }
+        ]},
+        { id: 'sciroppi', name: 'Sciroppo Monin', products: [
+          { id: 'SM001', name: 'Scir. Sambuco Monin', description: 'Sciroppo di sambuco premium per cocktail, dal sapore floreale e delicato.', price: 12.00, code: 'SM001', subcategory: 'Sciroppo' },
+          { id: 'SM002', name: 'Scir. Vaniglia Monin', description: 'Sciroppo di vaniglia Madagascar, aroma intenso e naturale.', price: 12.50, code: 'SM002', subcategory: 'Sciroppo' }
+        ]}
+      ]
+    },
+    {
+      id: 'alimentare',
+      name: 'ALIMENTARE',
+      icon: '🧀',
+      subcategories: [
+        { id: 'conserve', name: 'Conserve', products: [
+          { id: 'AC001', name: 'Acciughe del Cantabrico', description: 'Acciughe pregiate salate a mano, dal sapore intenso e delicato.', price: 22.00, code: 'AC001', subcategory: 'Conserve' }
+        ]},
+        { id: 'formaggi', name: 'Formaggi', products: [
+          { id: 'FO001', name: 'Gorgonzola DOP', description: 'Formaggio cremoso delle valli bergamasche, stagionato 60 giorni.', price: 18.00, code: 'FO001', subcategory: 'Erborinati' }
+        ]}
+      ]
     }
-  };
+  ];
+
+  const mockPastOrders = [
+    {
+      id: '1',
+      date: '18/07/2025',
+      products: [
+        { name: 'Pol Roger', quantity: 6, id: 'PR001' },
+        { name: 'Portofino Gin', quantity: 3, id: 'PG001' },
+        { name: 'Fever Tree Tonic Water', quantity: 2, id: 'FT001' }
+      ],
+      notes: 'URGENTE PER EVENTO DOMANI',
+      stato: 'in_gestione'
+    },
+    {
+      id: '2', 
+      date: '15/07/2025',
+      products: [
+        { name: 'Barbaresco Ceretto', quantity: 12, id: 'BR001' },
+        { name: 'Chardonnay Riserva', quantity: 6, id: 'VB001' }
+      ],
+      notes: 'CONSEGNA RISTORANTE',
+      stato: 'consegnato'
+    },
+    {
+      id: '3',
+      date: '10/07/2025', 
+      products: [
+        { name: 'Hendricks', quantity: 4, id: 'HG001' },
+        { name: 'Grey Goose', quantity: 2, id: 'VD001' },
+        { name: 'Scir. Sambuco Monin', quantity: 8, id: 'SM001' }
+      ],
+      notes: 'COCKTAIL BAR SETUP',
+      stato: 'in_spedizione'
+    },
+    {
+      id: '4',
+      date: '05/07/2025',
+      products: [
+        { name: 'Billecart - Salmon Brut', quantity: 24, id: 'BS001' }
+      ],
+      notes: 'MATRIMONIO VILLA',
+      stato: 'in_attesa'
+    }
+  ];
+
+  // Carica dati mock (simula caricamento)
+  useEffect(() => {
+    const loadMockData = () => {
+      setLoading(true);
+      // Simula chiamata API
+      setTimeout(() => {
+        setMacroCategories(mockMacroCategories);
+        setPastOrders(mockPastOrders);
+        setLoading(false);
+      }, 1000);
+    };
+    
+    loadMockData();
+  }, []);
 
   // Click outside handler per hamburger menu
   useEffect(() => {
@@ -201,24 +230,16 @@ const MyDivinos = () => {
     });
   };
 
-  const toggleFavorite = async (productId) => {
-    if (!user) return;
-    
-    try {
-      const isNowFavorite = await supabaseApi.toggleFavorite(user.id, productId);
-      
-      setFavorites(prev => {
-        const newFavorites = new Set(prev);
-        if (isNowFavorite) {
-          newFavorites.add(productId);
-        } else {
-          newFavorites.delete(productId);
-        }
-        return newFavorites;
-      });
-    } catch (error) {
-      console.error('Errore toggle preferito:', error);
-    }
+  const toggleFavorite = (productId) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(productId)) {
+        newFavorites.delete(productId);
+      } else {
+        newFavorites.add(productId);
+      }
+      return newFavorites;
+    });
   };
 
   const updateQuantity = (productId, quantity) => {
@@ -242,10 +263,12 @@ const MyDivinos = () => {
         setCurrentPage('storico');
         break;
       case 'vini':
-        window.open('/cataloghi/vini-champagne.pdf', '_blank');
+        // Per ora mostra alert - in futuro aprirà PDF
+        alert('Catalogo Vini - PDF non ancora caricato');
         break;
       case 'distillati':
-        window.open('/cataloghi/distillati.pdf', '_blank');
+        // Per ora mostra alert - in futuro aprirà PDF
+        alert('Catalogo Distillati - PDF non ancora caricato');
         break;
       case 'esci':
         window.close();
@@ -268,35 +291,16 @@ const MyDivinos = () => {
     goToHomepage();
   };
 
-  // FUNZIONE PRINCIPALE: SALVA ORDINE SOLO IN SUPABASE
-  const saveOrder = async () => {
-    if (!user || Object.keys(cart).length === 0) return;
+  // FUNZIONE MOCK: SALVA ORDINE (per ora solo messaggio)
+  const saveOrder = () => {
+    if (Object.keys(cart).length === 0) return;
     
-    try {
-      setLoading(true);
-      
-      // Salva l'ordine nel database
-      await supabaseApi.saveOrder(user.id, cart, notes);
-      
-      // Mostra messaggio di successo
-      setOrderSuccess(true);
-      
-      // Reset carrello dopo 2 secondi
-      setTimeout(() => {
-        setCart({});
-        setNotes('');
-        setShowCart(false);
-        setOrderSuccess(false);
-        // Ricarica storico ordini
-        initializeApp();
-      }, 2000);
-      
-    } catch (error) {
-      console.error('Errore salvataggio ordine:', error);
-      alert('Errore durante il salvataggio dell\'ordine. Riprova.');
-    } finally {
-      setLoading(false);
-    }
+    alert('Ordine salvato con successo!\n(In questa fase mock, l\'ordine non viene effettivamente salvato)');
+    
+    // Reset carrello
+    setCart({});
+    setNotes('');
+    setShowCart(false);
   };
 
   const resetCart = () => {
@@ -331,27 +335,6 @@ const MyDivinos = () => {
             <span className="text-blue-900 font-bold text-3xl">Divinos</span>
           </div>
           <p className="text-blue-900">Caricamento...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Se non c'è utente, mostra errore
-  if (!user) {
-    return (
-      <div className="max-w-md mx-auto bg-white min-h-screen flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <span className="text-red-600 font-bold text-2xl italic transform -rotate-12">My</span>
-            <span className="text-blue-900 font-bold text-3xl">Divinos</span>
-          </div>
-          <p className="text-red-600 mb-4">Utente non trovato</p>
-          <button 
-            onClick={initializeApp}
-            className="bg-blue-900 text-white px-6 py-2 rounded-lg"
-          >
-            Riprova
-          </button>
         </div>
       </div>
     );
@@ -552,16 +535,6 @@ const MyDivinos = () => {
           </div>
         </div>
 
-        {/* Messaggio di successo */}
-        {orderSuccess && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 m-4 rounded">
-            <div className="flex items-center">
-              <span className="text-green-500 mr-2">✅</span>
-              <span className="font-medium">Ordine salvato con successo!</span>
-            </div>
-          </div>
-        )}
-
         <div className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-blue-900">Il tuo carrello</h2>
@@ -639,10 +612,9 @@ const MyDivinos = () => {
             {Object.keys(cart).length > 0 && (
               <button 
                 onClick={saveOrder}
-                disabled={loading}
-                className="w-full bg-blue-900 text-white py-3 rounded-lg font-medium hover:bg-blue-800 disabled:opacity-50"
+                className="w-full bg-blue-900 text-white py-3 rounded-lg font-medium hover:bg-blue-800"
               >
-                {loading ? 'Salvataggio...' : 'Conferma Ordine'}
+                Conferma Ordine
               </button>
             )}
             
@@ -930,7 +902,7 @@ const MyDivinos = () => {
                                  `💬 *MESSAGGIO:*\n${messageText}\n\n` +
                                  `Cordiali saluti 🙏`;
                   
-                  const whatsappNumber = process.env.REACT_APP_WHATSAPP_NUMBER || '393356222225';
+                  const whatsappNumber = '393356222225';
                   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
                   window.open(whatsappUrl, '_blank');
                   setShowMessageModal(false);
